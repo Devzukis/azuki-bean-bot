@@ -68,7 +68,7 @@ let timeoutInterval = 30000;
 
 let blocksCounted = 0;
 
-const retrieveTraits = async (tokenId, owner) => {
+const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 	const metaUrl = `https://elementals-metadata.azuki.com/elemental/${tokenId}`;
 
 	console.log(chalk.red(`Retrieving metadata for token #${tokenId}\n${metaUrl}`))
@@ -119,7 +119,7 @@ const retrieveTraits = async (tokenId, owner) => {
 					);
 					try {
 						await twitterClient.v2.tweet(
-							`Elemental #${tokenId} has been revealed!\nOwner: ${owner}`,
+							`Elemental #${tokenId} has been revealed!\nOwner: ${owner}\nCollector Profile: https://www.azuki.com/collector/${ownerAddy}`,
 							{
 								media: { media_ids: [tUpload] },
 							}
@@ -230,7 +230,7 @@ const wssInit = async () => {
 				console.log(
 					chalk.yellow(`Retrieving data for Token #${numTokenId}...`)
 				);
-				await retrieveTraits(numTokenId, owner);
+				await retrieveTraits(numTokenId, owner, to_);
 			};
 			await getTraits();
 		} else {

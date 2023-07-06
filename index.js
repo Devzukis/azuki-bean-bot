@@ -71,13 +71,16 @@ let blocksCounted = 0;
 const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 	const metaUrl = `https://elementals-metadata.azuki.com/elemental/${tokenId}`;
 
-	console.log(chalk.red(`Retrieving metadata for token #${tokenId}\n${metaUrl}`))
+	console.log(
+		chalk.red(`Retrieving metadata for token #${tokenId}\n${metaUrl}`)
+	);
 	try {
 		const traits = await fetch(metaUrl, { method: "GET" });
 		//console.log(traits)
 		if (traits.ok) {
-			console.log(chalk.green("Metadata Verified!"))
+			console.log(chalk.green("Metadata Verified!"));
 			let jsonTraits = await traits.json();
+			let domain = jsonTraits.attributes[0].value
 			console.log(jsonTraits);
 			const embed = new EmbedBuilder()
 				.setColor(0xb91935)
@@ -102,7 +105,7 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 				.setTimestamp()
 				.setFooter({ text: "Azuki Elemental Beans Bot by 0xSharp" });
 
-		await	client.channels.cache
+			await client.channels.cache
 				.get(process.env.channelId)
 				.send({ embeds: [embed] });
 			console.log(chalk.green("Discord Message Sent Successfully."));
@@ -119,7 +122,7 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 					);
 					try {
 						await twitterClient.v2.tweet(
-							`Elemental #${tokenId} has been revealed!\nOwner: ${owner}\nCollector Profile: https://www.azuki.com/collector/${ownerAddy}`,
+							`${domain} Elemental #${tokenId} has been revealed!\nOwner: ${owner}\nCollector Profile: https://www.azuki.com/collector/${ownerAddy}`,
 							{
 								media: { media_ids: [tUpload] },
 							}
@@ -137,10 +140,10 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 				}
 			};
 			let imgUrl = jsonTraits.image;
-				await tweet(imgUrl, tokenId, owner);
+			await tweet(imgUrl, tokenId, owner);
 			return;
 		} else {
-			console.log("Something wrong with metadata...")
+			console.log("Something wrong with metadata...");
 		}
 	} catch (error) {
 		console.log(error);
@@ -213,18 +216,24 @@ const wssInit = async () => {
 		const ownerEns = await alchemyProvider.lookupAddress(to_);
 		let owner;
 		if (ownerEns != null) {
-			owner = ownerEns
+			owner = ownerEns;
 		} else {
-			owner = `${to_.slice(0, 5)}...${to_.substr(to_.length - 5)}`
+			owner = `${to_.slice(0, 5)}...${to_.substr(to_.length - 5)}`;
 		}
 
 		console.log(
-			chalk.red(`TX Detected:\nFrom:${from_}\nTo:${owner}\nToken ID: ${tokenId_}\nTX Hash: ${eventData_.transactionHash}`)
+			chalk.yellow(
+				`TX Detected:\nFrom:${from_}\nTo:${owner}\nToken ID: ${tokenId_}\nTX Hash: ${eventData_.transactionHash}`
+			)
 		);
 		console.log(eventData_.transactionHash);
 		if (from_ === "0x0000000000000000000000000000000000000000") {
 			let numTokenId = ethers.BigNumber.from(tokenId_).toNumber();
-			console.log(chalk.blue("Mint Detected.\nWaiting 2 minutes for metadata to populate..."));
+			console.log(
+				chalk.blue(
+					"Mint Detected.\nWaiting 2 minutes for metadata to populate..."
+				)
+			);
 			const getTraits = async () => {
 				await new Promise((res) => setTimeout(res, 120000));
 				console.log(

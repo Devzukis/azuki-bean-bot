@@ -23,16 +23,78 @@ const wssEndpoint = `wss://eth-mainnet.g.alchemy.com/v2/${process.env.alchemyKey
 ///// Alchemy Provider /////
 const alchemyProvider = new ethers.providers.AlchemyProvider(
 	"homestead",
-	process.env.alchemyProvider
+	process.env.alchemyKey
 );
 
 ///// Contract Params /////
 const contractAddress = "0xb6a37b5d14d502c3ab0ae6f3a0e058bc9517786e";
 const contractAbi = [
 	{
+		inputs: [
+			{ internalType: "string", name: "_name", type: "string" },
+			{ internalType: "string", name: "_symbol", type: "string" },
+			{ internalType: "uint16", name: "maxSupply_", type: "uint16" },
+		],
+		stateMutability: "nonpayable",
+		type: "constructor",
+	},
+	{ inputs: [], name: "AlreadyMinted", type: "error" },
+	{ inputs: [], name: "BeanAddressNotSet", type: "error" },
+	{ inputs: [], name: "InvalidRecipient", type: "error" },
+	{ inputs: [], name: "InvalidRedeemer", type: "error" },
+	{ inputs: [], name: "InvalidTokenId", type: "error" },
+	{ inputs: [], name: "NoMoreTokenIds", type: "error" },
+	{ inputs: [], name: "NotAllowedByRegistry", type: "error" },
+	{ inputs: [], name: "NotMinted", type: "error" },
+	{ inputs: [], name: "RedeemBeanNotOpen", type: "error" },
+	{ inputs: [], name: "RegistryNotSet", type: "error" },
+	{ inputs: [], name: "Unauthorized", type: "error" },
+	{ inputs: [], name: "UnsafeRecipient", type: "error" },
+	{ inputs: [], name: "WrongFrom", type: "error" },
+	{ inputs: [], name: "ZeroAddress", type: "error" },
+	{
 		anonymous: false,
 		inputs: [
-			{ indexed: true, internalType: "address", name: "from", type: "address" },
+			{
+				indexed: true,
+				internalType: "address",
+				name: "owner",
+				type: "address",
+			},
+			{
+				indexed: true,
+				internalType: "address",
+				name: "spender",
+				type: "address",
+			},
+			{ indexed: true, internalType: "uint256", name: "id", type: "uint256" },
+		],
+		name: "Approval",
+		type: "event",
+	},
+	{
+		anonymous: false,
+		inputs: [
+			{
+				indexed: true,
+				internalType: "address",
+				name: "owner",
+				type: "address",
+			},
+			{
+				indexed: true,
+				internalType: "address",
+				name: "operator",
+				type: "address",
+			},
+			{ indexed: false, internalType: "bool", name: "approved", type: "bool" },
+		],
+		name: "ApprovalForAll",
+		type: "event",
+	},
+	{
+		anonymous: false,
+		inputs: [
 			{ indexed: true, internalType: "address", name: "to", type: "address" },
 			{
 				indexed: true,
@@ -40,9 +102,364 @@ const contractAbi = [
 				name: "tokenId",
 				type: "uint256",
 			},
+			{
+				indexed: true,
+				internalType: "uint256",
+				name: "beanId",
+				type: "uint256",
+			},
+		],
+		name: "BeanRedeemed",
+		type: "event",
+	},
+	{
+		anonymous: false,
+		inputs: [
+			{
+				indexed: true,
+				internalType: "address",
+				name: "previousOwner",
+				type: "address",
+			},
+			{
+				indexed: true,
+				internalType: "address",
+				name: "newOwner",
+				type: "address",
+			},
+		],
+		name: "OwnershipTransferred",
+		type: "event",
+	},
+	{
+		anonymous: false,
+		inputs: [
+			{ indexed: true, internalType: "address", name: "from", type: "address" },
+			{ indexed: true, internalType: "address", name: "to", type: "address" },
+			{ indexed: true, internalType: "uint256", name: "id", type: "uint256" },
 		],
 		name: "Transfer",
 		type: "event",
+	},
+	{
+		inputs: [],
+		name: "MAX_SUPPLY",
+		outputs: [{ internalType: "uint16", name: "", type: "uint16" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "operator", type: "address" },
+			{ internalType: "uint256", name: "tokenId", type: "uint256" },
+		],
+		name: "approve",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "address", name: "owner", type: "address" }],
+		name: "balanceOf",
+		outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+		name: "getApproved",
+		outputs: [{ internalType: "address", name: "", type: "address" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "", type: "address" },
+			{ internalType: "address", name: "", type: "address" },
+		],
+		name: "isApprovedForAll",
+		outputs: [{ internalType: "bool", name: "", type: "bool" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "isRegistryActive",
+		outputs: [{ internalType: "bool", name: "", type: "bool" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "name",
+		outputs: [{ internalType: "string", name: "", type: "string" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "operatorFilteringEnabled",
+		outputs: [{ internalType: "bool", name: "", type: "bool" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "owner",
+		outputs: [{ internalType: "address", name: "", type: "address" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "uint256", name: "id", type: "uint256" }],
+		name: "ownerOf",
+		outputs: [{ internalType: "address", name: "owner", type: "address" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "realOwner",
+		outputs: [{ internalType: "address", name: "", type: "address" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "to", type: "address" },
+			{ internalType: "uint256[]", name: "beanIds", type: "uint256[]" },
+		],
+		name: "redeemBeans",
+		outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "redeemInfo",
+		outputs: [
+			{ internalType: "bool", name: "redeemBeanOpen", type: "bool" },
+			{ internalType: "address", name: "beanAddress", type: "address" },
+		],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "registryAddress",
+		outputs: [{ internalType: "address", name: "", type: "address" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "renounceOwnership",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "uint256", name: "tokenId", type: "uint256" },
+			{ internalType: "uint256", name: "salePrice", type: "uint256" },
+		],
+		name: "royaltyInfo",
+		outputs: [
+			{ internalType: "address", name: "", type: "address" },
+			{ internalType: "uint256", name: "", type: "uint256" },
+		],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "from", type: "address" },
+			{ internalType: "address", name: "to", type: "address" },
+			{ internalType: "uint256", name: "id", type: "uint256" },
+		],
+		name: "safeTransferFrom",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "from", type: "address" },
+			{ internalType: "address", name: "to", type: "address" },
+			{ internalType: "uint256", name: "id", type: "uint256" },
+			{ internalType: "bytes", name: "data", type: "bytes" },
+		],
+		name: "safeTransferFrom",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "operator", type: "address" },
+			{ internalType: "bool", name: "approved", type: "bool" },
+		],
+		name: "setApprovalForAll",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "string", name: "baseURI", type: "string" }],
+		name: "setBaseURI",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "string", name: "baseURIPermanent", type: "string" },
+		],
+		name: "setBaseURIPermanent",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "contractAddress", type: "address" },
+		],
+		name: "setBeanAddress",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "receiver", type: "address" },
+			{ internalType: "uint96", name: "feeNumerator", type: "uint96" },
+		],
+		name: "setDefaultRoyalty",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "bool", name: "_isRegistryActive", type: "bool" }],
+		name: "setIsRegistryActive",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "uint256[]", name: "tokenIds", type: "uint256[]" },
+		],
+		name: "setIsUriPermanent",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "string", name: "_newName", type: "string" },
+			{ internalType: "string", name: "_newSymbol", type: "string" },
+		],
+		name: "setNameAndSymbol",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "bool", name: "value", type: "bool" }],
+		name: "setOperatorFilteringEnabled",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "bool", name: "_redeemBeanOpen", type: "bool" }],
+		name: "setRedeemBeanState",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "_registryAddress", type: "address" },
+		],
+		name: "setRegistryAddress",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "uint256", name: "tokenId", type: "uint256" },
+			{ internalType: "address", name: "receiver", type: "address" },
+			{ internalType: "uint96", name: "feeNumerator", type: "uint96" },
+		],
+		name: "setTokenRoyalty",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "bytes4", name: "interfaceId", type: "bytes4" }],
+		name: "supportsInterface",
+		outputs: [{ internalType: "bool", name: "", type: "bool" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "symbol",
+		outputs: [{ internalType: "string", name: "", type: "string" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }],
+		name: "tokenURI",
+		outputs: [{ internalType: "string", name: "", type: "string" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [],
+		name: "totalSupply",
+		outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+		stateMutability: "view",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "from", type: "address" },
+			{ internalType: "address", name: "to", type: "address" },
+			{ internalType: "uint256", name: "id", type: "uint256" },
+		],
+		name: "transferFrom",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
+		name: "transferLowerOwnership",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [{ internalType: "address", name: "newOwner", type: "address" }],
+		name: "transferOwnership",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
+	},
+	{
+		inputs: [
+			{ internalType: "address", name: "newRealOwner", type: "address" },
+		],
+		name: "transferRealOwnership",
+		outputs: [],
+		stateMutability: "nonpayable",
+		type: "function",
 	},
 ];
 
@@ -68,7 +485,10 @@ let timeoutInterval = 30000;
 
 let blocksCounted = 0;
 
-const retrieveTraits = async (tokenId, owner, ownerAddy) => {
+// Initializing Vars
+let pendingBeans = {};
+
+const retrieveTraits = async (tokenId, owner, ownerAddy, redeemedBeanTier) => {
 	const metaUrl = `https://elementals-metadata.azuki.com/elemental/${tokenId}`;
 
 	console.log(
@@ -80,7 +500,7 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 		if (traits.ok) {
 			console.log(chalk.green("Metadata Verified!"));
 			let jsonTraits = await traits.json();
-			let domain = jsonTraits.attributes[0].value
+			let domain = jsonTraits.attributes[0].value;
 			console.log(jsonTraits);
 			const embed = new EmbedBuilder()
 				.setColor(0xb91935)
@@ -91,6 +511,11 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 				.addFields({
 					name: `Owner:`,
 					value: `${owner}`,
+					inline: false,
+				})
+				.addFields({
+					name: "Bean Tier:",
+					value: redeemedBeanTier,
 					inline: false,
 				});
 			for (let i = 0; i < jsonTraits.attributes.length; i++) {
@@ -122,7 +547,7 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 					);
 					try {
 						await twitterClient.v2.tweet(
-							`${domain} Elemental #${tokenId} has been revealed!\nOwner: ${owner}\nCollector Profile: https://www.azuki.com/collector/${ownerAddy}`,
+							`${domain} Elemental #${tokenId} has been revealed!\nBean Tier: ${redeemedBeanTier}\nOwner: ${owner}\nCollector Profile: https://www.azuki.com/collector/${ownerAddy}`,
 							{
 								media: { media_ids: [tUpload] },
 							}
@@ -143,6 +568,7 @@ const retrieveTraits = async (tokenId, owner, ownerAddy) => {
 			await tweet(imgUrl, tokenId, owner);
 			return;
 		} else {
+			console.log(traits)
 			console.log("Something wrong with metadata...");
 		}
 	} catch (error) {
@@ -156,9 +582,6 @@ const wssInit = async () => {
 
 	// Initialize a Contract
 	wssContract = new ethers.Contract(contractAddress, contractAbi, wssProvider);
-
-	// Initialize Filters
-	const _transferFilter = wssContract.filters.Transfer();
 
 	// On websocket open, send a message
 	wssProvider._websocket.on("open", () => {
@@ -212,7 +635,7 @@ const wssInit = async () => {
 	}, aliveInterval);
 
 	// Contract Actions
-	wssContract.on(_transferFilter, async (from_, to_, tokenId_, eventData_) => {
+	wssContract.on("BeanRedeemed", async (to_, elementalId_, beanId_, eventData_) => {
 		const ownerEns = await alchemyProvider.lookupAddress(to_);
 		let owner;
 		if (ownerEns != null) {
@@ -223,28 +646,30 @@ const wssInit = async () => {
 
 		console.log(
 			chalk.yellow(
-				`TX Detected:\nFrom:${from_}\nTo:${owner}\nToken ID: ${tokenId_}\nTX Hash: ${eventData_.transactionHash}`
+				`TX Detected:\nowner:${owner}\nElemental ID: ${elementalId_}\nBurned Bean ID: ${beanId_}\nTX Hash: ${eventData_.transactionHash}`
 			)
 		);
-		console.log(eventData_.transactionHash);
-		if (from_ === "0x0000000000000000000000000000000000000000") {
-			let numTokenId = ethers.BigNumber.from(tokenId_).toNumber();
-			console.log(
-				chalk.blue(
-					"Mint Detected.\nWaiting 2 minutes for metadata to populate..."
-				)
-			);
-			const getTraits = async () => {
-				await new Promise((res) => setTimeout(res, 120000));
-				console.log(
-					chalk.yellow(`Retrieving data for Token #${numTokenId}...`)
-				);
-				await retrieveTraits(numTokenId, owner, to_);
-			};
-			await getTraits();
-		} else {
-			console.log("Not a mint.");
-		}
+
+				const beanMetaURL = `https://elementals-metadata.azuki.com/mystery-bean/${beanId_}`;
+				const redeemedBeanMeta = await fetch(beanMetaURL, { method: "GET" });
+				if (redeemedBeanMeta.ok) {
+					let jsonTraits = await redeemedBeanMeta.json();
+					let redeemedBeanTier = jsonTraits.attributes[0].value;
+					console.log(
+						chalk.blue(
+							"Mint Detected.\nWaiting 2 minutes for metadata to populate..."
+						)
+					);
+					console.log(eventData_);
+					const getTraits = async () => {
+						await new Promise((res) => setTimeout(res, 120000));
+						console.log(
+							chalk.yellow(`Retrieving data for Token #${elementalId_}...`)
+						);
+						await retrieveTraits(elementalId_, owner, to_, redeemedBeanTier);
+					};
+					await getTraits();
+				}
 	});
 };
 

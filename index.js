@@ -662,7 +662,7 @@ const wssInit = async () => {
 					);
 					console.log(eventData_);
 					const getTraits = async () => {
-						await new Promise((res) => setTimeout(res, 120000));
+						await new Promise((res) => setTimeout(res, 150000));
 						console.log(
 							chalk.yellow(`Retrieving data for Token #${elementalId_}...`)
 						);
